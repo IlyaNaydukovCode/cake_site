@@ -1,0 +1,4 @@
+├── frontend/
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── ... (остальные файлы frontend)

@@ -1,0 +1,139 @@
+# Имя файла: .dockerignore (без расширения)
+# Расположение: cake_site/.dockerignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Testing
+.coverage
+.pytest_cache/
+.mypy_cache/
+.coverage.*
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+.dockerignore
+Dockerfile*
+docker-compose*
+.docker/
+
+# Git
+.git/
+.gitignore
+.gitmodules
+.gitattributes
+
+# Documentation
+docs/_build/
+site/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Project specific
+alembic/versions/
+!alembic/versions/*.py
+*.sqlite3
+*.db
+test_db/
+test_*.py
+tests/
+test/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+secrets/
+keys/
+
+# Database migrations (except production)
+!alembic/versions/prod_*.py
+alembic/versions/dev_*.py
+
+# Frontend files (if mixed)
+node_modules/
+static/
+dist/
+build/
+
+# Backups
+*.backup
+*.old
+*.orig
+
+# Archives
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Media
+*.mp4
+*.avi
+*.mov
+*.mp3
+*.wav
+
+# Images (except for needed ones)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.ico
+*.svg
+
+# Development configs
+docker-dev.yml
+docker-compose.override.yml
+docker-compose.dev.yml

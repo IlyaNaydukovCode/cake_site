@@ -1,0 +1,534 @@
+<!-- test_chat_fixed.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест чата Cake Site (Исправленная версия)</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .section { margin-bottom: 20px; padding: 20px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
+        h2 { color: #333; margin-top: 0; }
+        input, button { padding: 10px; margin: 5px 0; font-size: 14px; }
+        input { width: calc(100% - 22px); border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; min-width: 120px; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        button.danger { background: #dc3545; }
+        button.danger:hover { background: #c82333; }
+        button.success { background: #28a745; }
+        button.success:hover { background: #218838; }
+        .status-box { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .status-connected { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status-disconnected { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status-connecting { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        #messages { height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; margin: 15px 0; background: white; }
+        .message { margin: 8px 0; padding: 8px 12px; border-radius: 8px; max-width: 80%; }
+        .message-system { background: #e9ecef; color: #495057; font-style: italic; margin: 10px auto; text-align: center; max-width: 100%; }
+        .message-me { background: #007bff; color: white; margin-left: auto; }
+        .message-other { background: #f1f3f5; color: #212529; margin-right: auto; }
+        .message-connection { background: #d1ecf1; color: #0c5460; text-align: center; max-width: 100%; }
+        .message-user { font-weight: bold; margin-right: 5px; }
+        .message-time { font-size: 11px; opacity: 0.7; margin-left: 10px; }
+        .users-online { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
+        .user-badge { background: #e9ecef; padding: 5px 10px; border-radius: 20px; font-size: 12px; }
+        .debug-panel { background: #f8f9fa; padding: 15px; border-radius: 4px; margin-top: 20px; font-size: 12px; }
+        .debug-toggle { font-size: 12px; color: #6c757d; cursor: pointer; }
+        .debug-content { display: none; margin-top: 10px; }
+        pre { background: white; padding: 10px; border: 1px solid #dee2e6; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🛠 Тестирование WebSocket чата Cake Site</h1>
+    
+    <!-- Секция авторизации -->
+    <div class="section">
+        <h2>🔐 1. Авторизация</h2>
+        <p><strong>Важно:</strong> Используется Form URL encoded формат (username/password)</p>
+        
+        <div>
+            <input type="email" id="email" placeholder="Email" value="admin@example.com">
+        </div>
+        <div>
+            <input type="password" id="password" placeholder="Пароль" value="admin123">
+        </div>
+        <div>
+            <button onclick="login()" id="loginBtn">Войти</button>
+            <button onclick="logout()" class="danger">Выйти</button>
+        </div>
+        
+        <div id="authStatus" class="status-box status-disconnected">
+            🔒 Не авторизован
+        </div>
+        <div id="authError" style="color: #dc3545; margin-top: 10px;"></div>
+    </div>
+    
+    <!-- Секция чата -->
+    <div class="section" id="chatSection" style="display:none;">
+        <h2>💬 2. Чат</h2>
+        
+        <div id="connectionStatus" class="status-box status-disconnected">
+            📡 Статус: <span id="wsStatusText">Отключен</span>
+        </div>
+        
+        <div>
+            👥 Онлайн: <span id="onlineCount">0</span> пользователей
+            <div id="onlineUsers" class="users-online"></div>
+        </div>
+        
+        <div id="messages">
+            <!-- Сообщения будут здесь -->
+        </div>
+        
+        <div>
+            <input type="text" id="messageInput" placeholder="Введите сообщение..." disabled>
+            <button id="sendBtn" onclick="sendMessage()" disabled>📤 Отправить</button>
+            <button onclick="disconnectWebSocket()" class="danger">🔌 Отключиться</button>
+            <button onclick="reconnectWebSocket()" class="success">🔄 Переподключиться</button>
+        </div>
+        
+        <div id="chatError" style="color: #dc3545; margin-top: 10px;"></div>
+    </div>
+    
+    <!-- Панель отладки -->
+    <div class="section debug-panel">
+        <div class="debug-toggle" onclick="toggleDebug()">
+            📊 <strong>Панель отладки</strong> (нажмите чтобы развернуть/свернуть)
+        </div>
+        <div class="debug-content" id="debugContent">
+            <div>
+                <button onclick="testAuth()">🧪 Тест авторизации</button>
+                <button onclick="showTokens()">🔑 Показать токены</button>
+                <button onclick="clearTokens()">🗑 Очистить токены</button>
+                <button onclick="testWebSocket()">🔌 Тест WebSocket</button>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <h4>Информация:</h4>
+                <div>Access Token: <span id="tokenPreview">нет</span></div>
+                <div>WebSocket URL: <code id="wsUrl">не определен</code></div>
+                <div>User ID: <span id="userId">неизвестно</span></div>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <h4>Логи:</h4>
+                <pre id="debugLogs"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Глобальные переменные
+        let accessToken = localStorage.getItem('access_token') || '';
+        let refreshToken = localStorage.getItem('refresh_token') || '';
+        let ws = null;
+        let userId = '';
+        let userName = '';
+        let userEmail = '';
+        
+        // Логирование для отладки
+        function debugLog(message, type = 'info') {
+            const logs = document.getElementById('debugLogs');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff';
+            logs.innerHTML += `<div style="color: ${color}; margin: 2px 0;">[${timestamp}] ${message}</div>`;
+            logs.scrollTop = logs.scrollHeight;
+            
+            // Также выводим в консоль браузера
+            if (type === 'error') console.error(message);
+            else if (type === 'success') console.log('%c' + message, 'color: green');
+            else console.log(message);
+        }
+        
+        // Проверяем сохраненные токены при загрузке
+        window.onload = function() {
+            debugLog('Страница загружена', 'info');
+            
+            if (accessToken) {
+                // Пробуем проверить токен и получить информацию о пользователе
+                checkStoredToken();
+            }
+        };
+        
+        // Проверка сохраненного токена
+        async function checkStoredToken() {
+            try {
+                debugLog('Проверка сохраненного токена...', 'info');
+                
+                const response = await fetch('/users/', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (response.ok) {
+                    const userData = await response.json();
+                    userId = userData.id;
+                    userName = userData.full_name;
+                    userEmail = userData.email;
+                    
+                    updateAuthStatus(`✅ Авторизован как ${userName} (${userEmail})`, 'status-connected');
+                    showChatSection();
+                    connectWebSocket();
+                    
+                    debugLog(`Пользователь найден: ${userName} (ID: ${userId})`, 'success');
+                } else {
+                    // Пробуем обновить токен
+                    debugLog('Токен устарел, пробуем обновить...', 'info');
+                    await refreshAccessToken();
+                }
+            } catch (error) {
+                debugLog(`Ошибка проверки токена: ${error.message}`, 'error');
+                clearTokens();
+            }
+        }
+        
+        // Функция авторизации
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            // Очищаем ошибки
+            document.getElementById('authError').textContent = '';
+            debugLog(`Попытка авторизации для: ${email}`, 'info');
+            
+            try {
+                // Используем Form URL encoded формат
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json'
+                    },
+                    body: new URLSearchParams({
+                        'username': email,
+                        'password': password
+                    })
+                });
+                
+                debugLog(`Ответ сервера: ${response.status} ${response.statusText}`, 'info');
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Ошибка ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Сохраняем токены
+                accessToken = data.access_token;
+                refreshToken = data.refresh_token;
+                localStorage.setItem('access_token', accessToken);
+                localStorage.setItem('refresh_token', refreshToken);
+                
+                debugLog('Токены успешно получены и сохранены', 'success');
+                
+                // Получаем информацию о пользователе
+                const userResponse = await fetch('/users/', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (userResponse.ok) {
+                    const userData = await userResponse.json();
+                    userId = userData.id;
+                    userName = userData.full_name;
+                    userEmail = userData.email;
+                    
+                    debugLog(`Информация о пользователе получена: ${userName}`, 'success');
+                }
+                
+                updateAuthStatus(`✅ Авторизован как ${userName || email}`, 'status-connected');
+                document.getElementById('authError').textContent = '';
+                showChatSection();
+                connectWebSocket();
+                
+            } catch (error) {
+                const errorMsg = `Ошибка авторизации: ${error.message}`;
+                document.getElementById('authError').textContent = errorMsg;
+                debugLog(errorMsg, 'error');
+                updateAuthStatus('❌ Ошибка авторизации', 'status-disconnected');
+            }
+        }
+        
+        // Обновление access токена
+        async function refreshAccessToken() {
+            try {
+                debugLog('Попытка обновления access токена...', 'info');
+                
+                const response = await fetch('/auth/refresh', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refresh_token: refreshToken })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    accessToken = data.access_token;
+                    localStorage.setItem('access_token', accessToken);
+                    debugLog('Токен успешно обновлен', 'success');
+                    checkStoredToken(); // Повторно проверяем
+                } else {
+                    throw new Error('Не удалось обновить токен');
+                }
+            } catch (error) {
+                debugLog(`Ошибка обновления токена: ${error.message}`, 'error');
+                clearTokens();
+            }
+        }
+        
+        // Выход из системы
+        function logout() {
+            clearTokens();
+            updateAuthStatus('🔒 Не авторизован', 'status-disconnected');
+            document.getElementById('chatSection').style.display = 'none';
+            debugLog('Пользователь вышел из системы', 'info');
+        }
+        
+        // Очистка токенов
+        function clearTokens() {
+            accessToken = '';
+            refreshToken = '';
+            userId = '';
+            userName = '';
+            userEmail = '';
+            
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            
+            updateTokenPreview();
+            debugLog('Токены очищены', 'info');
+        }
+        
+        // Подключение к WebSocket
+        function connectWebSocket() {
+            if (!accessToken) {
+                debugLog('Ошибка: Нет access токена для подключения к WebSocket', 'error');
+                alert('Сначала авторизуйтесь!');
+                return;
+            }
+            
+            // Закрываем предыдущее соединение
+            if (ws) {
+                ws.close();
+            }
+            
+            // Формируем URL WebSocket
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            const wsUrl = `${protocol}//${host}/ws/chat?token=${accessToken}`;
+            
+            document.getElementById('wsUrl').textContent = wsUrl;
+            debugLog(`Подключение к WebSocket: ${wsUrl}`, 'info');
+            
+            ws = new WebSocket(wsUrl);
+            
+            updateConnectionStatus('🔄 Подключение...', 'status-connecting');
+            document.getElementById('messageInput').disabled = true;
+            document.getElementById('sendBtn').disabled = true;
+            
+            ws.onopen = function() {
+                debugLog('✅ WebSocket соединение установлено', 'success');
+                updateConnectionStatus('✅ Подключен', 'status-connected');
+                document.getElementById('messageInput').disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('messageInput').focus();
+                
+                addMessageToChat('system', `Добро пожаловать в чат, ${userName || 'пользователь'}!`);
+            };
+            
+            ws.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    debugLog(`Получено сообщение: ${JSON.stringify(data).substring(0, 100)}...`, 'info');
+                    handleWebSocketMessage(data);
+                } catch (e) {
+                    debugLog(`Ошибка парсинга сообщения: ${e.message}`, 'error');
+                }
+            };
+            
+            ws.onclose = function(event) {
+                debugLog(`WebSocket соединение закрыто. Код: ${event.code}, причина: ${event.reason || 'нет'}`, 'info');
+                updateConnectionStatus('❌ Отключен', 'status-disconnected');
+                document.getElementById('messageInput').disabled = true;
+                document.getElementById('sendBtn').disabled = true;
+                
+                addMessageToChat('system', 'Соединение разорвано. Попытка переподключения через 5 секунд...');
+                
+                // Автоматическое переподключение через 5 секунд
+                setTimeout(() => {
+                    if (accessToken) {
+                        debugLog('Попытка переподключения...', 'info');
+                        connectWebSocket();
+                    }
+                }, 5000);
+            };
+            
+            ws.onerror = function(error) {
+                debugLog(`WebSocket ошибка: ${error}`, 'error');
+                updateConnectionStatus('❌ Ошибка подключения', 'status-disconnected');
+            };
+        }
+        
+        // Обработка сообщений WebSocket
+        function handleWebSocketMessage(data) {
+            switch (data.type) {
+                case 'message':
+                    const isMyMessage = data.user_email === userEmail;
+                    addMessageToChat(isMyMessage ? 'me' : 'other', 
+                        `<span class="message-user">${data.user_name}:</span> ${data.message}`, 
+                        data.timestamp);
+                    break;
+                    
+                case 'system':
+                    addMessageToChat('system', data.message);
+                    break;
+                    
+                case 'connection':
+                    const action = data.action === 'connected' ? 'подключился' : 'отключился';
+                    addMessageToChat('connection', `${data.user_name} ${action}`);
+                    updateOnlineCount(data.online_count);
+                    break;
+                    
+                case 'history':
+                    // Загружаем историю сообщений
+                    data.data.forEach(msg => {
+                        const isMyMessage = msg.user_email === userEmail;
+                        addMessageToChat(isMyMessage ? 'me' : 'other', 
+                            `<span class="message-user">${msg.user_name}:</span> ${msg.message}`, 
+                            msg.created_at);
+                    });
+                    break;
+                    
+                default:
+                    debugLog(`Неизвестный тип сообщения: ${data.type}`, 'info');
+            }
+        }
+        
+        // Отправка сообщения
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) {
+                return;
+            }
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const messageData = {
+                    type: 'message',
+                    message: message
+                };
+                
+                ws.send(JSON.stringify(messageData));
+                debugLog(`Отправлено сообщение: "${message}"`, 'info');
+                input.value = '';
+            } else {
+                debugLog('Ошибка: WebSocket не подключен', 'error');
+                alert('Не подключено к чату!');
+            }
+        }
+        
+        // Отключение от WebSocket
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                debugLog('WebSocket соединение закрыто вручную', 'info');
+            }
+        }
+        
+        // Переподключение к WebSocket
+        function reconnectWebSocket() {
+            disconnectWebSocket();
+            setTimeout(() => {
+                connectWebSocket();
+            }, 1000);
+        }
+        
+        // Вспомогательные функции UI
+        function updateAuthStatus(text, className) {
+            const authStatus = document.getElementById('authStatus');
+            authStatus.textContent = text;
+            authStatus.className = `status-box ${className}`;
+        }
+        
+        function updateConnectionStatus(text, className) {
+            document.getElementById('wsStatusText').textContent = text;
+            document.getElementById('connectionStatus').className = `status-box ${className}`;
+        }
+        
+        function showChatSection() {
+            document.getElementById('chatSection').style.display = 'block';
+        }
+        
+        function addMessageToChat(type, text, timestamp = null) {
+            const messages = document.getElementById('messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message message-${type}`;
+            
+            const time = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+            msgDiv.innerHTML = `${text} <span class="message-time">${time}</span>`;
+            messages.appendChild(msgDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+        
+        function updateOnlineCount(count) {
+            document.getElementById('onlineCount').textContent = count;
+        }
+        
+        function updateTokenPreview() {
+            const preview = document.getElementById('tokenPreview');
+            preview.textContent = accessToken ? `${accessToken.substring(0, 20)}...` : 'нет';
+            document.getElementById('userId').textContent = userId || 'неизвестно';
+        }
+        
+        // Функции отладки
+        function toggleDebug() {
+            const content = document.getElementById('debugContent');
+            content.style.display = content.style.display === 'block' ? 'none' : 'block';
+        }
+        
+        function testAuth() {
+            debugLog('=== Запуск теста авторизации ===', 'info');
+            login();
+        }
+        
+        function showTokens() {
+            updateTokenPreview();
+            debugLog(`Access Token: ${accessToken || 'нет'}`, 'info');
+            debugLog(`Refresh Token: ${refreshToken || 'нет'}`, 'info');
+            debugLog(`User ID: ${userId || 'нет'}`, 'info');
+            debugLog(`User Name: ${userName || 'нет'}`, 'info');
+        }
+        
+        function testWebSocket() {
+            if (ws) {
+                debugLog(`WebSocket состояние: ${ws.readyState}`, 'info');
+                debugLog(`WebSocket URL: ${ws.url}`, 'info');
+            } else {
+                debugLog('WebSocket не инициализирован', 'info');
+            }
+        }
+        
+        // Отправка сообщения по Enter
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Обновляем предпросмотр токена каждую секунду
+        setInterval(updateTokenPreview, 1000);
+        
+        // Авто-подключение если есть токен (раскомментируйте если нужно)
+        // setTimeout(() => {
+        //     if (accessToken) {
+        //         debugLog('Автоматическая проверка сохраненного токена...', 'info');
+        //         checkStoredToken();
+        //     }
+        // }, 1000);
+    </script>
+</body>
+</html>

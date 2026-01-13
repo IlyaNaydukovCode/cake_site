@@ -1,0 +1,152 @@
+# Имя файла: .dockerignore (без расширения)
+# Расположение: cake-site-frontend/.dockerignore
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Production
+dist/
+build/
+
+# Development
+.cache/
+.parcel-cache/
+
+# Testing
+coverage/
+.nyc_output/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.production.local
+.env.test.local
+.env.development.local
+
+# Logs
+logs
+*.log
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Git
+.git/
+.gitignore
+.gitmodules
+.gitattributes
+
+# Editor
+.vscode/
+.idea/
+.project
+.classpath
+*.launch
+.settings/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*~
+
+# Cache
+.cache/
+.parcel-cache/
+.tmp/
+temp/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Backup files
+*.backup
+*.old
+*.orig
+
+# Archives
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Media files
+*.mp4
+*.avi
+*.mov
+*.mp3
+*.wav
+*.ogg
+
+# Images (except src/assets)
+!src/assets/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.ico
+*.svg
+
+# Source maps
+*.map
+
+# Configs (except needed)
+!vite.config.js
+!vue.config.js
+*.config.js
+tsconfig.json
+jsconfig.json
+
+
+# Test files
+__tests__/
+__mocks__/
+*.spec.js
+*.test.js
+jest.config.js
+cypress/
+playwright/
+
+# TypeScript
+*.tsbuildinfo
+
+# Misc
+.eslintcache
+.stylelintcache
+bower_components/
+jspm_packages/
+
+# Vue specific
+.vuepress/
+.ssr/
+.nuxt/
+.next/
